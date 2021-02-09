@@ -99,6 +99,17 @@ variable "template_file_variables" {
   default     = {}
 }
 
+variable "default_management_group" {
+  type        = string
+  description = "OPTIONAL: If specified, will set the default Management Group used when new Subscriptions are added to the Tenant."
+  default     = ""
+
+  validation {
+    condition     = can(regex("^[a-z0-9-]{0,36}$", var.default_management_group))
+    error_message = "The default_management_group value must be a valid Management Group ID."
+  }
+}
+
 variable "default_location" {
   type        = string
   description = "OPTIONAL: If specified, will use set the default location used for resource deployments where needed."

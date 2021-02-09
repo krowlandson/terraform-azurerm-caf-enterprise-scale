@@ -19,6 +19,7 @@ locals {
   custom_landing_zones       = var.custom_landing_zones
   library_path               = var.library_path
   template_file_variables    = var.template_file_variables
+  default_management_group   = var.default_management_group
   default_location           = var.default_location
 }
 

@@ -39,14 +39,19 @@ azurerm_ver_latest="$(curl -s $azurerm_url | jq -r '.version')"
 # control strategy matrix for test jobs
 ########################################
 
-# Need to get the length of the tf_vers
-# array and reduce by 1 to control the initial
-# copy loop. As the output is being generated
-# as a JSON string object, we need ensure the
-# "final loop" doesn't append a comma to the
-# end of the last entry.
+# Need length of tf_vers array. This gives the number
+# of items in the array.
 tf_vers_len=${#tf_vers[@]}
-copy_len=$(($tf_vers_len - 1))
+
+# Need to reduce value by 1 to allow for zero index.
+tf_vers_len=$(($tf_vers_len-))
+
+# To generate a valid JSON object, we need to reduce
+# tf_vers_len value by 1 to stop the copy loop before
+# the last value is processed. This allows the final
+# array value to be processsed without appending a
+# comma to the end of the last entry (see below).
+copy_len=$(($tf_vers_len-1))
 
 # Generate an array containing the JSON object
 # for the matrix configuration.
@@ -55,9 +60,9 @@ matrix=("{")
 # matrix array for "n-1" tf_vers.
 for (( i=0; i<$copy_len; i++ ))
 do
-    tf_ver=${tf_vers[$(($i+1))]}
-    job_id_1=$((($i*2)+1))
-    job_id_2=$((($i*2)+2))
+    tf_ver=${tf_vers[$i]}
+    job_id_1=$(($i*2))
+    job_id_2=$((($i*2)+1))
     matrix+=("\"$job_id_1. (TF: $tf_ver, AZ: $azurerm_ver_base)\": { \"TF_VERSION\": \"$tf_ver\", \"TF_AZ_VERSION\": \"$azurerm_ver_base\"},")
     matrix+=("\"$job_id_2. (TF: $tf_ver, AZ: $azurerm_ver_latest)\": { \"TF_VERSION\": \"$tf_ver\", \"TF_AZ_VERSION\": \"$azurerm_ver_latest\"},")
 done

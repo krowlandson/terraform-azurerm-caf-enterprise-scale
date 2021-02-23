@@ -44,7 +44,7 @@ azurerm_ver_latest="$(curl -s $azurerm_url | jq -r '.version')"
 tf_vers_len=${#tf_vers[@]}
 
 # Need to reduce value by 1 to allow for zero index.
-tf_vers_len=$(($tf_vers_len-))
+tf_vers_len=$(($tf_vers_len-1))
 
 # To generate a valid JSON object, we need to reduce
 # tf_vers_len value by 1 to stop the copy loop before

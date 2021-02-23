@@ -1,7 +1,8 @@
 ---
 steps:
 - task: Bash@3
-  displayName: 'Build Strategy Matrix'
+  name: build_strategy
+  displayName: "Build Strategy"
   inputs:
     targetType: 'inline'
     script: 'make azp-strategy'

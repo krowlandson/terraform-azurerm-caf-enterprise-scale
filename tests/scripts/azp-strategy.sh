@@ -43,9 +43,6 @@ azurerm_ver_latest="$(curl -s $azurerm_url | jq -r '.version')"
 # of items in the array.
 tf_vers_len=${#tf_vers[@]}
 
-# Need to reduce value by 1 to allow for zero index.
-tf_vers_len=$(($tf_vers_len-1))
-
 # To generate a valid JSON object, we need to reduce
 # tf_vers_len value by 1 to stop the copy loop before
 # the last value is processed. This allows the final
@@ -61,8 +58,8 @@ matrix=("{")
 for (( i=0; i<$copy_len; i++ ))
 do
     tf_ver=${tf_vers[$i]}
-    job_id_1=$(($i*2))
-    job_id_2=$((($i*2)+1))
+    job_id_1=$((($i*2)+1))
+    job_id_2=$((($i*2)+2))
     matrix+=("\"$job_id_1. (TF: $tf_ver, AZ: $azurerm_ver_base)\": { \"TF_VERSION\": \"$tf_ver\", \"TF_AZ_VERSION\": \"$azurerm_ver_base\"},")
     matrix+=("\"$job_id_2. (TF: $tf_ver, AZ: $azurerm_ver_latest)\": { \"TF_VERSION\": \"$tf_ver\", \"TF_AZ_VERSION\": \"$azurerm_ver_latest\"},")
 done
@@ -70,9 +67,9 @@ done
 # JSON entries outside the copy loop to ensure
 # the "final loop" doesn't append a comma to
 # the end of the last entry.
-tf_ver=${tf_vers[$tf_vers_len]}
-job_id_1=$((($tf_vers_len*2)-1))
-job_id_2=$(($tf_vers_len*2))
+tf_ver=${tf_vers[$copy_len]}
+job_id_1=$((($copy_len*2)+1))
+job_id_2=$((($copy_len*2)+2))
 matrix+=("\"$job_id_1. (TF: $tf_ver, AZ: $azurerm_ver_base)\": { \"TF_VERSION\": \"$tf_ver\", \"TF_AZ_VERSION\": \"$azurerm_ver_base\"},")
 matrix+=("\"$job_id_2. (TF: $tf_ver, AZ: $azurerm_ver_latest)\": { \"TF_VERSION\": \"$tf_ver\", \"TF_AZ_VERSION\": \"$azurerm_ver_latest\"}")
 matrix+=("}")

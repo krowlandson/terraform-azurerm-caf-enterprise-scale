@@ -8,8 +8,8 @@ set -e
 
 echo "==> Generating Azure Pipelines Strategy Matrix..."
 
-tf_url='https://api.github.com/repos/hashicorp/terraform/tags'
-azurerm_url='https://registry.terraform.io/v1/providers/hashicorp/azurerm'
+tf_url="https://api.github.com/repos/hashicorp/terraform/tags"
+azurerm_url="https://registry.terraform.io/v1/providers/hashicorp/azurerm"
 
 ########################################
 # Terraform Versions
@@ -50,7 +50,7 @@ copy_len=$(($tf_vers_len - 1))
 
 # Generate an array containing the JSON object
 # for the matrix configuration.
-matrix=('{')
+matrix=("{")
 # The copy loop generates JSON entries in the
 # matrix array for "n-1" tf_vers.
 for (( i=0; i<$copy_len; i++ ))
@@ -70,10 +70,10 @@ job_id_1=$((($tf_vers_len*2)-1))
 job_id_2=$(($tf_vers_len*2))
 matrix+=("\"$job_id_1. (TF: $tf_ver, AZ: $azurerm_ver_base)\": { \"TF_VERSION\": \"$tf_ver\", \"TF_AZ_VERSION\": \"$azurerm_ver_base\"},")
 matrix+=("\"$job_id_2. (TF: $tf_ver, AZ: $azurerm_ver_latest)\": { \"TF_VERSION\": \"$tf_ver\", \"TF_AZ_VERSION\": \"$azurerm_ver_latest\"}")
-matrix+=('}')
+matrix+=("}")
 
 # Use "jq" to ensure matrix contains valid JSON.
-matrix_json_output=$(echo $matrix | jq -c .)
+matrix_json_output=$( echo ${matrix[*]} | jq -c . )
 
 # Save the matrix value to an output variable
 # for downstream consumption .

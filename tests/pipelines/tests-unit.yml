@@ -4,18 +4,18 @@ name: 'Tests (Unit)'
 trigger: none
 
 jobs:
-- job: 'Matrix Generator'
+- job: matrix_generator
   pool:
     vmImage: ubuntu-20.04
   steps:
   - template: templates/tests-strategy.yml
 
-- job: 'Run Unit Tests'
+- job: run_unit_tests
   pool:
     vmImage: ubuntu-20.04
-  dependsOn: 'Matrix Generator'
+  dependsOn: matrix_generator
   strategy:
-    matrix: $[ dependencies.'Matrix Generator'.outputs["'Build Strategy Matrix'.matrix_json"] ]
+    matrix: $[ dependencies.matrix_generator.outputs["'Build Strategy Matrix'.matrix_json"] ]
   steps:
   - template: templates/tests-common.yml
 

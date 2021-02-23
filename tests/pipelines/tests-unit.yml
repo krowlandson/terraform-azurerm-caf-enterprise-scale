@@ -13,7 +13,7 @@ jobs:
   - template: templates/tests-strategy.yml
 
 - job: run_unit_tests
-  displayName: 'Run Unit Tests'
+  displayName: 'Unit Tests'
   dependsOn: matrix_generator
   strategy:
     matrix: $[ dependencies.matrix_generator.outputs['build_strategy.matrix_json'] ]

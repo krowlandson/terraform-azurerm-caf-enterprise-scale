@@ -2,7 +2,7 @@
 steps:
 - task: Bash@3
   name: build_strategy
-  displayName: "Build Strategy"
+  displayName: "Generate Build Strategy"
   inputs:
     targetType: 'inline'
     script: 'make azp-strategy'

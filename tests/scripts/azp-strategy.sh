@@ -23,7 +23,8 @@ azurerm_url="https://registry.terraform.io/v1/providers/hashicorp/azurerm"
 tf_vers=("0.13.2")
 tf_vers+=($(curl -s $tf_url | jq -r '[.[].name | select(match("^v0.13"))] | .[0]' | tr -d v))
 tf_vers+=($(curl -s $tf_url | jq -r '[.[].name | select(match("^v0.14"))] | .[2,1,0]' | tr -d v))
-tf_vers+=($(curl -s $tf_url | jq -r '[.[].name | select(match("^v0.15"))] | .[0]' | tr -d v))
+# Terraform v0.15.x currently causes validation errors. Needs further investigation.
+# tf_vers+=($(curl -s $tf_url | jq -r '[.[].name | select(match("^v0.15"))] | .[0]' | tr -d v))
 
 ########################################
 # Terraform AzureRM Provider Versions

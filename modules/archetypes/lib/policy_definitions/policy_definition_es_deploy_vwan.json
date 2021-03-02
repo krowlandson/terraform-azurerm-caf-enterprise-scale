@@ -1,35 +1,12 @@
 {
-  "name": "ES-Deploy-vWAN",
+  "name": "Deploy-vWAN",
   "type": "Microsoft.Authorization/policyDefinitions",
-  "apiVersion": "2019-09-01",
+  "apiVersion": "2020-09-01",
+  "scope": null,
   "properties": {
-    "description": "Deploy-vWAN",
-    "displayName": "ES-Deploy-vWAN",
-    "mode": "All",
-    "parameters": {
-      "vwanname": {
-        "type": "String",
-        "metadata": {
-          "displayName": "vwanname",
-          "description": "Name of the Virtual WAN"
-        }
-      },
-      "vwanRegion": {
-        "type": "String",
-        "metadata": {
-          "displayName": "vwanRegion",
-          "description": "Select Azure region for Virtual WAN",
-          "strongType": "location"
-        }
-      },
-      "rgName": {
-        "type": "String",
-        "metadata": {
-          "displayName": "rgName",
-          "description": "Provide name for resource group."
-        }
-      }
-    },
+    "policyType": "Custom",
+    "displayName": "Deploy the Virtual WAN in the specific region",
+    "description": "Deploy the Virtual WAN in the specific region.",
     "policyRule": {
       "if": {
         "allOf": [
@@ -40,7 +17,7 @@
         ]
       },
       "then": {
-        "effect": "deployIfNotExists",
+        "effect": "[parameters('effect')]",
         "details": {
           "type": "Microsoft.Network/virtualWans",
           "deploymentScope": "Subscription",
@@ -96,7 +73,7 @@
                     "name": "vwan",
                     "resourceGroup": "[parameters('rgName')]",
                     "dependsOn": [
-                      "[resourceId('Microsoft.Resources/resourceGroups/', parameters('rgName'))]"
+                      "[[resourceId('Microsoft.Resources/resourceGroups/', parameters('rgName'))]"
                     ],
                     "properties": {
                       "mode": "Incremental",
@@ -128,6 +105,47 @@
           }
         }
       }
-    }
+    },
+    "metadata": {
+      "version": "1.0.0",
+      "category": "Network"
+    },
+    "parameters": {
+      "vwanname": {
+        "type": "String",
+        "metadata": {
+          "displayName": "vwanname",
+          "description": "Name of the Virtual WAN"
+        }
+      },
+      "vwanRegion": {
+        "type": "String",
+        "metadata": {
+          "displayName": "vwanRegion",
+          "description": "Select Azure region for Virtual WAN",
+          "strongType": "location"
+        }
+      },
+      "rgName": {
+        "type": "String",
+        "metadata": {
+          "displayName": "rgName",
+          "description": "Provide name for resource group."
+        }
+      },
+      "effect": {
+        "type": "string",
+        "defaultValue": "DeployIfNotExists",
+        "allowedValues": [
+          "DeployIfNotExists",
+          "Disabled"
+        ],
+        "metadata": {
+          "displayName": "Effect",
+          "description": "Enable or disable the execution of the policy"
+        }
+      }
+    },
+    "mode": "All"
   }
 }

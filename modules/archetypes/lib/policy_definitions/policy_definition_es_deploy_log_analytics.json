@@ -1,48 +1,12 @@
 {
-  "name": "ES-Deploy-LogAnalytics",
+  "name": "Deploy-Log-Analytics",
   "type": "Microsoft.Authorization/policyDefinitions",
-  "apiVersion": "2019-09-01",
+  "apiVersion": "2020-09-01",
+  "scope": null,
   "properties": {
-    "description": "Deploy-LogAnalytics",
-    "displayName": "ES-Deploy-LogAnalytics",
-    "mode": "All",
-    "parameters": {
-      "workspaceName": {
-        "type": "String",
-        "metadata": {
-          "displayName": "workspaceName",
-          "description": "Provide name for log analytics workspace"
-        }
-      },
-      "automationAccountName": {
-        "type": "String",
-        "metadata": {
-          "displayName": "automationAccountName",
-          "description": "Provide name for automation account"
-        }
-      },
-      "workspaceRegion": {
-        "type": "String",
-        "metadata": {
-          "displayName": "workspaceRegion",
-          "description": "Select Azure region for Log Analytics"
-        }
-      },
-      "automationRegion": {
-        "type": "String",
-        "metadata": {
-          "displayName": "automationRegion",
-          "description": "Select Azure region for Automation account"
-        }
-      },
-      "rgName": {
-        "type": "String",
-        "metadata": {
-          "displayName": "rgName",
-          "description": "Provide name for resource group."
-        }
-      }
-    },
+    "policyType": "Custom",
+    "displayName": "Deploy the Log Analytics in the subscription",
+    "description": "Deploys Log Analytics and Automation account to the subscription where the policy is assigned.",
     "policyRule": {
       "if": {
         "allOf": [
@@ -53,13 +17,14 @@
         ]
       },
       "then": {
-        "effect": "deployIfNotExists",
+        "effect": "[parameters('effect')]",
         "details": {
           "type": "Microsoft.OperationalInsights/workspaces",
           "deploymentScope": "Subscription",
           "existenceScope": "Subscription",
           "roleDefinitionIds": [
-            "/providers/Microsoft.Authorization/roleDefinitions/b24988ac-6180-42a0-ab88-20f7382dd24c"
+            "/providers/microsoft.authorization/roleDefinitions/749f88d5-cbae-40b8-bcfc-e573ddc772fa",
+            "/providers/microsoft.authorization/roleDefinitions/92aaf0da-9dab-42b6-94a3-d43ce8d16293"
           ],
           "existenceCondition": {
             "allOf": [
@@ -76,6 +41,9 @@
               "parameters": {
                 "rgName": {
                   "value": "[parameters('rgName')]"
+                },
+                "retentionInDays": {
+                  "value": "[parameters('retentionInDays')]"
                 },
                 "workspaceName": {
                   "value": "[parameters('workspaceName')]"
@@ -108,6 +76,9 @@
                   },
                   "automationRegion": {
                     "type": "string"
+                  },
+                  "retentionInDays": {
+                    "type": "string"
                   }
                 },
                 "variables": {},
@@ -125,7 +96,7 @@
                     "name": "log-analytics",
                     "resourceGroup": "[parameters('rgName')]",
                     "dependsOn": [
-                      "[resourceId('Microsoft.Resources/resourceGroups/', parameters('rgName'))]"
+                      "[[resourceId('Microsoft.Resources/resourceGroups/', parameters('rgName'))]"
                     ],
                     "properties": {
                       "mode": "Incremental",
@@ -156,7 +127,8 @@
                               "sku": {
                                 "name": "pernode"
                               },
-                              "enableLogAccessUsingOnlyResourcePermissions": true
+                              "enableLogAccessUsingOnlyResourcePermissions": true,
+                              "retentionInDays": "[int(parameters('retentionInDays'))]"
                             },
                             "resources": [
                               {
@@ -164,8 +136,8 @@
                                 "type": "linkedServices",
                                 "apiVersion": "2015-11-01-preview",
                                 "dependsOn": [
-                                  "[resourceId('Microsoft.OperationalInsights/workspaces/', parameters('workspaceName'))]",
-                                  "[resourceId('Microsoft.Automation/automationAccounts/', parameters('AutomationAccountName'))]"
+                                  "[[resourceId('Microsoft.OperationalInsights/workspaces/', parameters('workspaceName'))]",
+                                  "[[resourceId('Microsoft.Automation/automationAccounts/', parameters('AutomationAccountName'))]"
                                 ],
                                 "properties": {
                                   "resourceId": "[concat(subscription().id, '/resourceGroups/', parameters('rgName'), '/providers/Microsoft.Automation/automationAccounts/', parameters('AutomationAccountName'))]"
@@ -185,6 +157,68 @@
           }
         }
       }
-    }
+    },
+    "metadata": {
+      "version": "1.0.0",
+      "category": "Monitoring"
+    },
+    "parameters": {
+      "workspaceName": {
+        "type": "String",
+        "metadata": {
+          "displayName": "workspaceName",
+          "description": "Provide name for log analytics workspace"
+        }
+      },
+      "automationAccountName": {
+        "type": "String",
+        "metadata": {
+          "displayName": "automationAccountName",
+          "description": "Provide name for automation account"
+        }
+      },
+      "workspaceRegion": {
+        "type": "String",
+        "metadata": {
+          "displayName": "workspaceRegion",
+          "description": "Select Azure region for Log Analytics"
+        }
+      },
+      "automationRegion": {
+        "type": "String",
+        "metadata": {
+          "displayName": "automationRegion",
+          "description": "Select Azure region for Automation account"
+        }
+      },
+      "retentionInDays": {
+        "type": "string",
+        "defaultValue": "30",
+        "metadata": {
+          "displayName": "Data retention",
+          "description": "Select data retention (days) for Log Analytics."
+        }
+      },
+      "rgName": {
+        "type": "String",
+        "metadata": {
+          "displayName": "rgName",
+          "description": "Provide name for resource group."
+        }
+      },
+      "effect": {
+        "type": "string",
+        "defaultValue": "DeployIfNotExists",
+        "allowedValues": [
+          "DeployIfNotExists",
+          "Disabled"
+        ],
+        "metadata": {
+          "displayName": "Effect",
+          "description": "Enable or disable the execution of the policy"
+        }
+      }
+    },
+    "mode": "All"
   }
 }

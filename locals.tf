@@ -27,6 +27,7 @@ locals {
   template_file_variables        = var.template_file_variables
   default_location               = var.default_location
   default_tags                   = var.default_tags
+  default_management_group       = var.default_management_group
 }
 
 # The following locals are used to define base Azure

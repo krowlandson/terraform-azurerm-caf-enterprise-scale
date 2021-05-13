@@ -39,22 +39,22 @@ locals {
 locals {
   builtin_policy_set_definitions_map_from_json = try(length(local.builtin_policy_set_definitions_dataset_from_json) > 0, false) ? {
     for key, value in local.builtin_policy_set_definitions_dataset_from_json :
-    value.name => value.properties
+    value.name => value
     if value.type == local.resource_types.policy_set_definition
   } : null
   builtin_policy_set_definitions_map_from_yaml = try(length(local.builtin_policy_set_definitions_dataset_from_yaml) > 0, false) ? {
     for key, value in local.builtin_policy_set_definitions_dataset_from_yaml :
-    value.name => value.properties
+    value.name => value
     if value.type == local.resource_types.policy_set_definition
   } : null
   custom_policy_set_definitions_map_from_json = try(length(local.custom_policy_set_definitions_dataset_from_json) > 0, false) ? {
     for key, value in local.custom_policy_set_definitions_dataset_from_json :
-    value.name => value.properties
+    value.name => value
     if value.type == local.resource_types.policy_set_definition
   } : null
   custom_policy_set_definitions_map_from_yaml = try(length(local.custom_policy_set_definitions_dataset_from_yaml) > 0, false) ? {
     for key, value in local.custom_policy_set_definitions_dataset_from_yaml :
-    value.name => value.properties
+    value.name => value
     if value.type == local.resource_types.policy_set_definition
   } : null
 }
@@ -79,7 +79,7 @@ locals {
     {
       resource_id = "${local.provider_path.policy_set_definition}${policy_set}"
       scope_id    = local.scope_id
-      template    = local.archetype_policy_set_definitions_map[policy_set]
+      template    = try(local.archetype_policy_set_definitions_map[policy_set], null)
     }
   ]
 }

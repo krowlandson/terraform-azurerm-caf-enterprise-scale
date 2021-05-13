@@ -3,7 +3,7 @@
 locals {
   es_policy_assignments_by_management_group = flatten([
     for archetype in values(module.management_group_archetypes) :
-    archetype.configuration.policy_assignments
+    archetype.configuration.azurerm_policy_assignment
   ])
   es_policy_assignments_by_subscription = []
   es_policy_assignments = concat(
@@ -56,21 +56,29 @@ locals {
   # Policy Definitions
   policy_assignments_with_managed_identity_using_external_policy_definition = {
     for policy_assignment_id, policy_definition_id in local.policy_assignments_with_managed_identity :
-    policy_assignment_id => policy_definition_id
-    if length(regexall(local.resource_types.policy_definition, policy_definition_id)) > 0 && contains(local.internal_policy_definition_ids, policy_definition_id) != true
+    policy_assignment_id => [
+      policy_definition_id,
+    ]
+    if length(regexall(local.resource_types.policy_definition, policy_definition_id)) > 0
+    && contains(local.internal_policy_definition_ids, policy_definition_id) != true
+    && contains(keys(local.custom_policy_roles), policy_definition_id) != true
   }
   # Policy Set Definitions
   policy_assignments_with_managed_identity_using_external_policy_set_definition = {
     for policy_assignment_id, policy_set_definition_id in local.policy_assignments_with_managed_identity :
-    policy_assignment_id => policy_set_definition_id
-    if length(regexall(local.resource_types.policy_set_definition, policy_set_definition_id)) > 0 && contains(local.internal_policy_set_definition_ids, policy_set_definition_id) != true
+    policy_assignment_id => [
+      policy_set_definition_id,
+    ]
+    if length(regexall(local.resource_types.policy_set_definition, policy_set_definition_id)) > 0
+    && contains(local.internal_policy_set_definition_ids, policy_set_definition_id) != true
+    && contains(keys(local.custom_policy_roles), policy_set_definition_id) != true
   }
 }
 
 # Generate list of Policy Set Definitions to lookup from Azure.
 locals {
   azurerm_policy_set_definition_external_lookup = {
-    for policy_set_definition_id in local.policy_assignments_with_managed_identity_using_external_policy_set_definition :
+    for policy_set_definition_id in keys(transpose(local.policy_assignments_with_managed_identity_using_external_policy_set_definition)) :
     policy_set_definition_id => {
       name                  = basename(policy_set_definition_id)
       management_group_name = try(regex(local.regex_extract_provider_scope, policy_set_definition_id), null)
@@ -88,46 +96,49 @@ data "azurerm_policy_set_definition" "external_lookup" {
 
 # Create a list of Policy Definitions IDs used by all assigned Policy Set Definitions
 locals {
-  policy_definitions_ids_from_internal_policy_set_definitions = {
+  policy_definition_ids_from_internal_policy_set_definitions = {
     for policy_set_definition in local.es_policy_set_definitions :
-    policy_set_definition.resource_id => try(policy_set_definition.template.policyDefinitions.*.policyDefinitionId, local.empty_list)
-  }
-  policy_definitions_ids_from_external_policy_set_definitions = {
-    for policy_set_definition_id, policy_set_definition_config in data.azurerm_policy_set_definition.external_lookup :
-    policy_set_definition_id => [
-      for policy_definition_reference in policy_set_definition_config.policy_definition_reference :
-      policy_definition_reference.policy_definition_id
+    policy_set_definition.resource_id => [
+      for policy_definition in policy_set_definition.template.properties.policyDefinitions :
+      policy_definition.policyDefinitionId
     ]
   }
-  policy_definitions_ids_from_policy_set_definitions = merge(
-    local.policy_definitions_ids_from_internal_policy_set_definitions,
-    local.policy_definitions_ids_from_external_policy_set_definitions,
+  policy_definition_ids_from_external_policy_set_definitions = {
+    for policy_set_definition_id, policy_set_definition_config in data.azurerm_policy_set_definition.external_lookup :
+    policy_set_definition_id => [
+      for policy_definition in policy_set_definition_config.policy_definition_reference :
+      policy_definition.policy_definition_id
+    ]
+  }
+  policy_definition_ids_from_policy_set_definitions = merge(
+    local.policy_definition_ids_from_internal_policy_set_definitions,
+    local.policy_definition_ids_from_external_policy_set_definitions,
   )
 }
 
 # Identify all Policy Definitions which are external to this module
 locals {
   # From Policy Assignments using Policy Set Definitions
-  external_policy_definitions_ids_from_policy_set_definitions = distinct(flatten([
-    for policy_definitions in values(local.policy_definitions_ids_from_policy_set_definitions) : [
-      for policy_definition in policy_definitions :
-      policy_definition
-      if contains(local.internal_policy_definition_ids, policy_definition) != true
+  external_policy_definition_ids_from_policy_set_definitions = distinct(flatten([
+    for policy_definition_ids in values(local.policy_definition_ids_from_policy_set_definitions) : [
+      for policy_definition_id in policy_definition_ids :
+      policy_definition_id
+      if contains(local.internal_policy_definition_ids, policy_definition_id) != true
     ]
   ]))
   external_policy_definitions_from_azurerm_policy_set_definition_external_lookup = {
-    for policy_set_definition_id in local.external_policy_definitions_ids_from_policy_set_definitions :
-    policy_set_definition_id => {
-      name                  = basename(policy_set_definition_id)
-      management_group_name = try(regex(local.regex_extract_provider_scope, policy_set_definition_id), null)
+    for policy_definition_id in local.external_policy_definition_ids_from_policy_set_definitions :
+    policy_definition_id => {
+      name                  = basename(policy_definition_id)
+      management_group_name = try(regex(local.regex_extract_provider_scope, policy_definition_id), null)
     }
   }
   # From Policy Assignments using Policy Definitions
   external_policy_definitions_from_internal_policy_assignments = {
-    for policy_set_definition_id in local.policy_assignments_with_managed_identity_using_external_policy_definition :
-    policy_set_definition_id => {
-      name                  = basename(policy_set_definition_id)
-      management_group_name = try(regex(local.regex_extract_provider_scope, policy_set_definition_id), null)
+    for policy_definition_id in keys(transpose(local.policy_assignments_with_managed_identity_using_external_policy_definition)) :
+    policy_definition_id => {
+      name                  = basename(policy_definition_id)
+      management_group_name = try(regex(local.regex_extract_provider_scope, policy_definition_id), null)
     }
   }
   # Then create a single list containing all Policy Definitions to lookup from Azure
@@ -147,14 +158,28 @@ data "azurerm_policy_definition" "external_lookup" {
 
 # Extract the Role Definition IDs from the internal and external
 # Policy Definitions, then combine into a single lookup map.
+# Loop on list of roleDefinitionIds ensures correct character
+# case to prevent duplicate values
 locals {
   internal_policy_definition_roles = {
     for policy_definition in local.es_policy_definitions :
-    policy_definition.resource_id => try(policy_definition.template.policyRule.then.details.roleDefinitionIds, local.empty_list)
+    policy_definition.resource_id => try(
+      [
+        for role_definition in policy_definition.template.properties.policyRule.then.details.roleDefinitionIds :
+        "/providers/Microsoft.Authorization/roleDefinitions/${basename(role_definition)}"
+      ],
+      local.empty_list
+    )
   }
   external_policy_definition_roles = {
     for policy_definition_id, policy_definition_config in data.azurerm_policy_definition.external_lookup :
-    policy_definition_id => try(jsondecode(policy_definition_config.policy_rule).then.details.roleDefinitionIds, local.empty_list)
+    policy_definition_id => try(
+      [
+        for role_definition in jsondecode(policy_definition_config.policy_rule).then.details.roleDefinitionIds :
+        "/providers/Microsoft.Authorization/roleDefinitions/${basename(role_definition)}"
+      ],
+      local.empty_list
+    )
   }
   policy_definition_roles = merge(
     local.internal_policy_definition_roles,
@@ -167,7 +192,7 @@ locals {
 # of roles for each.
 locals {
   policy_set_definition_roles = {
-    for policy_set_definition_id, policy_definition_ids in local.policy_definitions_ids_from_policy_set_definitions :
+    for policy_set_definition_id, policy_definition_ids in local.policy_definition_ids_from_policy_set_definitions :
     policy_set_definition_id => distinct(flatten([
       for policy_definition_id in policy_definition_ids :
       local.policy_definition_roles[policy_definition_id]
@@ -181,7 +206,16 @@ locals {
   policy_roles = merge(
     local.policy_definition_roles,
     local.policy_set_definition_roles,
+    local.custom_policy_roles
   )
+}
+
+# Generate a list of principal_id values by Policy Assignment
+locals {
+  principal_id_by_policy_assignment = {
+    for pak, pav in azurerm_policy_assignment.enterprise_scale :
+    pak => pav.identity[0].principal_id
+  }
 }
 
 # Construct the array used to determine the list of
@@ -196,12 +230,11 @@ locals {
     for policy_assignment_id, policy_id in local.policy_assignments_with_managed_identity : [
       for role_definition_id in try(local.policy_roles[policy_id], local.empty_list) : [
         {
-          resource_id                      = "${local.azurerm_policy_assignment_enterprise_scale[policy_assignment_id].scope_id}${local.provider_path.role_assignment}${uuidv5(uuidv5("url", role_definition_id), policy_assignment_id)}"
-          scope_id                         = local.azurerm_policy_assignment_enterprise_scale[policy_assignment_id].scope_id
-          principal_id                     = try(azurerm_policy_assignment.enterprise_scale[policy_assignment_id].identity[0].principal_id, null)
-          role_definition_name             = null
-          role_definition_id               = role_definition_id
-          skip_service_principal_aad_check = true
+          resource_id          = "${local.azurerm_policy_assignment_enterprise_scale[policy_assignment_id].scope_id}${local.provider_path.role_assignment}${uuidv5(uuidv5("url", role_definition_id), policy_assignment_id)}"
+          scope_id             = local.azurerm_policy_assignment_enterprise_scale[policy_assignment_id].scope_id
+          principal_id         = try(local.principal_id_by_policy_assignment[policy_assignment_id], null)
+          role_definition_name = null
+          role_definition_id   = role_definition_id
         }
       ]
     ]

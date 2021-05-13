@@ -1,0 +1,29 @@
+---
+name: 'Tests (Unit)'
+
+trigger: none
+
+pool:
+  vmImage: ubuntu-20.04
+
+jobs:
+- job: matrix_generator
+  displayName: 'Matrix Generator'
+  steps:
+  - template: templates/tests-strategy.yml
+
+- job: run_unit_tests
+  displayName: 'Unit Tests'
+  dependsOn: matrix_generator
+  strategy:
+    matrix: $[ dependencies.matrix_generator.outputs['build_strategy.matrix_json'] ]
+  steps:
+  - template: templates/tests-common.yml
+
+  - task: Bash@3
+    displayName: 'Terraform (plan)'
+    inputs:
+      targetType: 'inline'
+      script: 'make tf-plan'
+    env:
+      ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)

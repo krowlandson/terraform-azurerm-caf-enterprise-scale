@@ -1,11 +1,17 @@
 {
-  "name": "ES-Deploy-Nsg-FlowLogs",
+  "name": "Deploy-Nsg-FlowLogs",
   "type": "Microsoft.Authorization/policyDefinitions",
-  "apiVersion": "2019-09-01",
+  "apiVersion": "2020-09-01",
+  "scope": null,
   "properties": {
-    "description": "Deploys NSG flow logs and traffic analytics",
-    "displayName": "ES-Deploy-Nsg-FlowLogs",
-    "mode": "All",
+    "policyType": "Custom",
+    "mode": "Indexed",
+    "displayName": "Deploys NSG flow logs and traffic analytics",
+    "description": "Deploys NSG flow logs and traffic analytics to a storageaccountid with a specfied retention period.",
+    "metadata": {
+      "version": "1.0.0",
+      "category": "Monitoring"
+    },
     "parameters": {
       "retention": {
         "type": "Integer",
@@ -39,9 +45,22 @@
         "type": "String",
         "metadata": {
           "strongType": "omsWorkspace",
-          "displayName": "Resource ID of Log Analytics workspace"
+          "displayName": "Resource ID of Log Analytics workspace",
+          "description": "Select Log Analytics workspace from dropdown list. If this workspace is outside of the scope of the assignment you must manually grant 'Log Analytics Contributor' permissions (or similar) to the policy assignment's principal ID."
         },
         "defaultValue": ""
+      },
+      "effect": {
+        "type": "String",
+        "defaultValue": "DeployIfNotExists",
+        "allowedValues": [
+          "DeployIfNotExists",
+          "Disabled"
+        ],
+        "metadata": {
+          "displayName": "Effect",
+          "description": "Enable or disable the execution of the policy"
+        }
       }
     },
     "policyRule": {
@@ -50,11 +69,12 @@
         "equals": "Microsoft.Network/networkSecurityGroups"
       },
       "then": {
-        "effect": "deployIfNotExists",
+        "effect": "[parameters('effect')]",
         "details": {
           "type": "Microsoft.Network/networkWatchers/flowLogs",
           "roleDefinitionIds": [
-            "/providers/Microsoft.Authorization/roleDefinitions/b24988ac-6180-42a0-ab88-20f7382dd24c"
+            "/providers/microsoft.authorization/roleDefinitions/749f88d5-cbae-40b8-bcfc-e573ddc772fa",
+            "/providers/microsoft.authorization/roleDefinitions/92aaf0da-9dab-42b6-94a3-d43ce8d16293"
           ],
           "resourceGroupName": "NetworkWatcherRG",
           "existenceCondition": {
@@ -71,7 +91,7 @@
           },
           "deployment": {
             "properties": {
-              "mode": "incremental",
+              "mode": "Incremental",
               "parameters": {
                 "networkSecurityGroupName": {
                   "value": "[field('name')]"
@@ -103,16 +123,16 @@
                 "contentVersion": "1.0.0.0",
                 "parameters": {
                   "networkSecurityGroupName": {
-                    "type": "string"
+                    "type": "String"
                   },
                   "resourceGroupName": {
-                    "type": "string"
+                    "type": "String"
                   },
                   "location": {
-                    "type": "string"
+                    "type": "String"
                   },
                   "storageAccountResourceId": {
-                    "type": "string"
+                    "type": "String"
                   },
                   "retention": {
                     "type": "int"
@@ -124,7 +144,7 @@
                     "type": "int"
                   },
                   "logAnalytics": {
-                    "type": "string"
+                    "type": "String"
                   }
                 },
                 "variables": {},

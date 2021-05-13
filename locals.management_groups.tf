@@ -186,10 +186,10 @@ locals {
   }
   # Logic to determine whether to include the core Enterprise-scale
   # Management Groups as part of the deployment
-  es_core_landing_zones_to_include = local.deploy_core_landing_zones ? local.es_core_landing_zones : local.empty_map
+  es_core_landing_zones_to_include = local.deploy_core_landing_zones ? local.es_core_landing_zones : null
   # Logic to determine whether to include the demo "Landing Zone"
   # Enterprise-scale Management Groups as part of the deployment
-  es_demo_landing_zones_to_include = local.deploy_demo_landing_zones ? local.es_demo_landing_zones : local.empty_map
+  es_demo_landing_zones_to_include = local.deploy_demo_landing_zones ? local.es_demo_landing_zones : null
   # Local map containing all Management Groups to deploy
   es_landing_zones_merge = merge(
     local.es_core_landing_zones_to_include,
@@ -206,7 +206,14 @@ locals {
       display_name               = value.display_name
       parent_management_group_id = try(length(value.parent_management_group_id) > 0, false) ? replace(lower(value.parent_management_group_id), "/[^a-z0-9]/", "-") : local.root_parent_id
       subscription_ids           = value.subscription_ids
-      archetype_config           = value.archetype_config
+      archetype_config = {
+        archetype_id   = value.archetype_config.archetype_id
+        access_control = value.archetype_config.access_control
+        parameters = merge(
+          value.archetype_config.parameters,
+          try(module.management_resources.configuration.archetype_config_overrides[key].parameters, null),
+        )
+      }
     }
   }
 }
